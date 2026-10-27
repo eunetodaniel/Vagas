@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!--
+  GUIA RÁPIDO DE EDIÇÃO
+  - Cores e fontes: bloco :root no começo do <style> (claro) e os dois blocos escuros logo abaixo.
+  - Textos das telas: marcação HTML (Início, Área do candidato, Gestão), antes do <script>.
+  - Listas editáveis no <script>: AREAS (áreas para marcar), CARGOS (sugestões de cargo),
+    TAGS_PADRAO (tags iniciais da gestão), MAX_EXTRAS (limite de cargos extras).
+  - Dados, envio de currículo e identificação de quem acessa dependem do ambiente de páginas do Claude
+    (claude.use("db"), claude.use("assets"), claude.use("user")). Fora dele, a página abre, mas o cadastro
+    fica indisponível.
+-->
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Quadro de Vagas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra superior com três áreas (Início, Área do candidato, Gestão). Início abre com um banner grande que leva ao cadastro; a gestão é um ranking em linhas. */
+:root {
+  --bg: #F1F5F6;
+  --surface: #FFFFFF;
+  --surface-2: #E8EEF0;
+  --ink: #12212A;
+  --muted: #53656F;
+  --line: #D3DCE0;
+  --accent: #0B7A69;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #D9F0EA;
+  --danger: #B3261E;
+  --tg-a: #0B7A69;
+  --tg-a-bg: #D9F0EA;
+  --tg-b: #1D5FA8;
+  --tg-b-bg: #DCEAF9;
+  --tg-c: #8A5A00;
+  --tg-c-bg: #FBEBC8;
+  --tg-n: #5C6B73;
+  --tg-n-bg: #E3E9EC;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D161B;
+    --surface: #142128;
+    --surface-2: #1C2D35;
+    --ink: #E6EEF1;
+    --muted: #96A8B1;
+    --line: #26373F;
+    --accent: #3CC3AA;
+    --accent-ink: #052520;
+    --accent-soft: #123530;
+    --danger: #FF8A80;
+    --tg-a: #3CC3AA;
+    --tg-a-bg: #123530;
+    --tg-b: #7DB6F2;
+    --tg-b-bg: #14293F;
+    --tg-c: #F2C14E;
+    --tg-c-bg: #3A2D0C;
+    --tg-n: #A3B3BB;
+    --tg-n-bg: #223239;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D161B;
+  --surface: #142128;
+  --surface-2: #1C2D35;
+  --ink: #E6EEF1;
+  --muted: #96A8B1;
+  --line: #26373F;
+  --accent: #3CC3AA;
+  --accent-ink: #052520;
+  --accent-soft: #123530;
+  --danger: #FF8A80;
+  --tg-a: #3CC3AA;
+  --tg-a-bg: #123530;
+  --tg-b: #7DB6F2;
+  --tg-b-bg: #14293F;
+  --tg-c: #F2C14E;
+  --tg-c-bg: #3A2D0C;
+  --tg-n: #A3B3BB;
+  --tg-n-bg: #223239;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 900px; margin: 0 auto; padding-block: 20px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.12; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.hint { font-size: 13px; color: var(--muted); font-weight: 400; }
+
+/* Barra superior */
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-bottom: 32px; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 12px; }
+.tab { border: 0; background: transparent; padding: 8px 14px; border-radius: 9px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.tab[aria-current="page"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+.notice { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; color: var(--muted); margin-bottom: 20px; }
+.notice strong { color: var(--ink); }
+
+/* Início */
+.banner { display: grid; gap: 18px; background: var(--accent); color: var(--accent-ink); border-radius: 20px; padding: clamp(24px, 6vw, 48px); text-decoration: none; }
+.banner .k { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .85; margin: 0; }
+.banner h1 { font-size: clamp(34px, 7.5vw, 58px); font-weight: 750; letter-spacing: -0.025em; max-width: 14ch; }
+.banner p { margin: 0; max-width: 46ch; font-size: 17px; opacity: .92; }
+.banner .go { justify-self: start; display: inline-flex; align-items: center; gap: 10px; background: var(--accent-ink); color: var(--accent); font-weight: 700; padding: 12px 20px; border-radius: 12px; }
+.banner:hover .go { filter: brightness(.96); }
+.passos { list-style: none; padding: 0; margin: 28px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; counter-reset: p; }
+.passos li { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; counter-increment: p; }
+.passos li::before { content: counter(p); display: block; font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--accent); margin-bottom: 4px; }
+.passos b { display: block; }
+.passos span { color: var(--muted); font-size: 14.5px; }
+.gestao-card { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; }
+.gestao-card b { font-family: var(--font-display); font-size: 20px; }
+
+/* Títulos de área */
+.titulo { margin-bottom: 8px; font-size: clamp(30px, 6vw, 42px); font-weight: 700; letter-spacing: -0.02em; }
+.sub { color: var(--muted); margin: 0 0 24px; max-width: 60ch; }
+
+/* Formulários */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+.form { display: grid; gap: 18px; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field > label, legend { font-size: 14px; font-weight: 600; }
+.field label small { font-weight: 500; color: var(--muted); }
+.field input, .field select, .field textarea { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-width: 0; }
+.field input[type="file"] { padding: 9px; }
+.field input[aria-invalid="true"] { border-color: var(--danger); }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+.extras { display: grid; gap: 10px; }
+.extra-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chipbtn { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 13px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.chipbtn:hover { border-color: var(--accent); }
+.chipbtn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.err { color: var(--danger); font-size: 14px; margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 18px; font-weight: 600; cursor: pointer; text-decoration: none; color: var(--ink); display: inline-block; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.small { padding: 5px 11px; font-size: 14px; }
+.btn.danger { color: var(--danger); }
+.btn[disabled] { opacity: .5; cursor: default; }
+.sent { background: var(--accent-soft); border-radius: 12px; padding: 12px 16px; margin: 0 0 18px; }
+.sent b { color: var(--accent); }
+
+/* Gestão */
+.gestao { display: grid; gap: 28px; }
+.resumo { display: flex; flex-wrap: wrap; gap: 8px; }
+.filt { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+.filt[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filt .n { font-variant-numeric: tabular-nums; opacity: .7; margin-left: 4px; }
+.busca { display: grid; gap: 10px; }
+.busca input { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.rank { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.linha { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 8px 16px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.pos { font-family: var(--font-display); font-size: 34px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1; padding-top: 2px; }
+.linha[data-tier="0"] .pos { color: var(--accent); }
+.nome { font-weight: 700; font-size: 18px; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 14px; margin-top: 2px; overflow-wrap: anywhere; }
+.cargos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.cg { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.cg.p1 { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.cg.p2 { background: var(--tg-b-bg); color: var(--tg-b); font-weight: 600; }
+.cg.area { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+.lado { display: grid; gap: 8px; justify-items: end; }
+.tagsel { border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 14px; cursor: pointer; background: var(--tg-n-bg); color: var(--tg-n); max-width: 100%; }
+.tagsel[data-k="a"] { background: var(--tg-a-bg); color: var(--tg-a); }
+.tagsel[data-k="b"] { background: var(--tg-b-bg); color: var(--tg-b); }
+.tagsel[data-k="c"] { background: var(--tg-c-bg); color: var(--tg-c); }
+.mov { display: flex; gap: 6px; }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 32px 22px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
+.empty h2 { font-size: 21px; color: var(--ink); }
+.empty p { margin: 0; max-width: 44ch; }
+.tag-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.tag-item:first-of-type { border-top: 0; }
+.tag-novo { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tag-novo input { flex: 1 1 200px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; min-width: 0; }
+details.cfg > summary { cursor: pointer; font-weight: 700; font-family: var(--font-display); font-size: 18px; }
+details.cfg .card { margin-top: 12px; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 10px; font-weight: 600; max-width: calc(100% - 32px); z-index: 20; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+
+@media (max-width: 620px) {
+  .passos { grid-template-columns: minmax(0, 1fr); }
+  .linha { grid-template-columns: 40px minmax(0, 1fr); }
+  .pos { font-size: 28px; }
+  .lado { grid-column: 1 / -1; grid-auto-flow: column; justify-content: space-between; justify-items: start; align-items: center; }
+  .card { padding: 18px; }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="brand">Quadro de Vagas</div>
+    <nav class="tabs" id="tabs" aria-label="Áreas"></nav>
+  </header>
+  <div id="avisos"></div>
+
+  <main id="v-inicio">
+    <a class="banner" href="#candidato">
+      <p class="k">Área do candidato</p>
+      <h1>Seu currículo, na mão de quem contrata</h1>
+      <p>Conte quais cargos você procura, anexe o currículo e pronto. Quando surgir uma vaga que combine com você, o responsável entra em contato.</p>
+      <span class="go">Quero me cadastrar <span aria-hidden="true">→</span></span>
+    </a>
+    <ol class="passos">
+      <li><b>Diga o que procura</b><span>Cargo principal, um segundo cargo e outras áreas que combinam com você.</span></li>
+      <li><b>Anexe o currículo</b><span>Em PDF ou imagem, até 20 MB.</span></li>
+      <li><b>Aguarde o contato</b><span>Seu cadastro entra no banco de talentos e pode ser atualizado quando quiser.</span></li>
+    </ol>
+    <div id="home-gestao"></div>
+  </main>
+
+  <main id="v-candidato" hidden>
+    <h1 class="titulo">Área do candidato</h1>
+    <p class="sub">Preencha seus dados e anexe o currículo. Você pode voltar aqui a qualquer momento para atualizar o cadastro.</p>
+    <div id="cand-status"></div>
+    <form class="card form" id="form-cand" novalidate>
+      <div class="field"><label for="c-nome">Nome completo</label><input id="c-nome" type="text" maxlength="90" autocomplete="name"></div>
+      <div class="field"><label for="c-cargo1">Cargo desejado 1 <small>· Prioritário</small></label><input id="c-cargo1" type="text" maxlength="80" list="lista-cargos" placeholder="O cargo que você mais quer" autocomplete="off"></div>
+      <div class="field"><label for="c-cargo2">Cargo desejado 2 <small>· Possível adequação</small></label><input id="c-cargo2" type="text" maxlength="80" list="lista-cargos" placeholder="Um cargo em que você também se encaixa" autocomplete="off"></div>
+      <fieldset>
+        <legend>Mais cargos <span class="hint">(se você se identifica com outras funções)</span></legend>
+        <div class="extras" id="extras"></div>
+        <div><button class="btn small" type="button" id="add-extra">+ Adicionar cargo</button></div>
+      </fieldset>
+      <fieldset>
+        <legend>Outras áreas que combinam com você <span class="hint">(toque para marcar)</span></legend>
+        <div class="chips" id="areas"></div>
+      </fieldset>
+      <div class="field"><label for="c-contato">WhatsApp ou e-mail <small>· opcional</small></label><input id="c-contato" type="text" maxlength="120" placeholder="Para o responsável falar com você" autocomplete="off"></div>
+      <div class="field" id="campo-arq"></div>
+      <p class="err" id="c-err" role="alert"></p>
+      <div class="actions"><button class="btn primary" type="submit" id="c-enviar">Enviar cadastro</button></div>
+    </form>
+    <datalist id="lista-cargos"></datalist>
+  </main>
+
+  <main id="v-gestao" hidden>
+    <div class="gestao">
+      <div>
+        <h1 class="titulo">Gestão</h1>
+        <p class="sub">Todos os candidatos cadastrados, em ordem de ranking. A tag define o grupo e as setas definem a posição dentro dele.</p>
+        <div class="resumo" id="resumo" role="group" aria-label="Filtrar por tag"></div>
+      </div>
+      <div class="busca">
+        <label for="busca-cargo" class="hint" style="font-weight:600">Buscar por nome, cargo ou área</label>
+        <input id="busca-cargo" type="search" placeholder="Ex.: atendente, financeiro, Maria">
+        <div class="resumo" id="top-cargos" role="group" aria-label="Cargos mais procurados"></div>
+      </div>
+      <div id="ranking"></div>
+      <details class="cfg">
+        <summary>Gerenciar tags</summary>
+        <div class="card">
+          <p class="hint" style="margin:0 0 8px">A ordem das tags define a prioridade no ranking: a primeira fica no topo.</p>
+          <div id="tags-lista"></div>
+          <form class="tag-novo" id="form-tag"><input id="tag-nome" type="text" maxlength="30" placeholder="Nova tag, ex.: Indicação"><button class="btn" type="submit">Adicionar tag</button></form>
+        </div>
+      </details>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  var AREAS = ["Administrativo", "Atendimento ao cliente", "Vendas e comércio", "Financeiro e contábil", "Recursos humanos", "Logística e estoque", "Produção e operação", "Tecnologia", "Marketing e comunicação", "Saúde e bem-estar", "Educação", "Construção civil", "Serviços gerais", "Motorista e entregas", "Hotelaria e turismo", "Segurança", "Jurídico", "Agropecuária", "Gastronomia", "Beleza e estética"];
+  var CARGOS = ["Auxiliar administrativo", "Assistente administrativo", "Atendente", "Vendedor(a)", "Recepcionista", "Operador(a) de caixa", "Auxiliar de estoque", "Auxiliar de serviços gerais", "Motorista", "Técnico(a) de enfermagem", "Professor(a)", "Estagiário(a)", "Analista financeiro", "Desenvolvedor(a)", "Pedreiro", "Cozinheiro(a)", "Garçom / Garçonete"];
+  var TAGS_PADRAO = [{ id: "promissor", nome: "Promissor" }, { id: "boa", nome: "Boa desenvoltura" }, { id: "amadurecer", nome: "Precisa amadurecer" }];
+  var KIND = ["a", "b", "c"];
+  var MAX_EXTRAS = 5;
+
+  var S = { db: null, assets: null, user: null, uid: null, isAdmin: false, canWrite: true,
+            carregou: false, erro: null, tab: "inicio", meu: null, preenchido: false,
+            talentos: [], gest: {}, tags: TAGS_PADRAO.slice(), fTag: "", fBusca: "", busy: false };
+  var F = { extras: [], areas: [] };
+
+  function use(name) {
+    try { return window.claude && window.claude.use ? window.claude.use(name).catch(function () { return null; }) : Promise.resolve(null); }
+    catch (e) { return Promise.resolve(null); }
+  }
+  function $(id) { return document.getElementById(id); }
+  function h(tag, props) {
+    var e = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === "class") e.className = v;
+      else if (k === "text") e.textContent = v;
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, "");
+      else e.setAttribute(k, v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var kids = [].concat(arguments[i]);
+      for (var j = 0; j < kids.length; j++) {
+        var kid = kids[j];
+        if (kid == null || kid === false) continue;
+        e.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+      }
+    }
+    return e;
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 3600);
+  }
+  function dataCurta(t) { return t ? new Date(t).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : ""; }
+  function norm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim(); }
+  function msgErro(e, padrao) {
+    var c = e && e.code;
+    if (c === "too_large") return "O arquivo é maior que 20 MB. Envie uma versão menor.";
+    if (c === "unsupported_type") return "Envie o currículo em PDF ou imagem (PNG, JPG).";
+    if (c === "quota_or_state") return "O espaço de arquivos desta página está cheio. Avise o responsável.";
+    if (c === "rate_limited") return "Muitas tentativas seguidas. Aguarde um instante e tente de novo.";
+    if (c === "invalid_argument") return "Seu acesso não permite enviar dados. Peça ao responsável permissão de colaborador.";
+    if (c === "quota_exceeded") return "O limite de registros desta página foi atingido. Avise o responsável.";
+    return padrao;
+  }
+
+  /* ---------- Navegação ---------- */
+  function lerHash() {
+    var t = (location.hash || "").replace("#", "");
+    if (t === "candidato") S.tab = "candidato";
+    else if (t === "gestao" && S.isAdmin) S.tab = "gestao";
+    else S.tab = "inicio";
+  }
+  function renderVista() {
+    $("v-inicio").hidden = S.tab !== "inicio";
+    $("v-candidato").hidden = S.tab !== "candidato";
+    $("v-gestao").hidden = S.tab !== "gestao";
+    var nav = $("tabs"); nav.textContent = "";
+    var itens = [["inicio", "Início"], ["candidato", "Área do candidato"]];
+    if (S.isAdmin) itens.push(["gestao", "Gestão"]);
+    itens.forEach(function (t) {
+      nav.append(h("button", { class: "tab", type: "button", "aria-current": S.tab === t[0] ? "page" : null, text: t[1],
+        onclick: function () { location.hash = t[0]; } }));
+    });
+  }
+  window.addEventListener("hashchange", function () { lerHash(); renderVista(); });
+
+  function renderAvisos() {
+    var box = $("avisos"); box.textContent = "";
+    function aviso(a, b) { box.append(h("div", { class: "notice" }, h("strong", { text: a + " " }), b)); }
+    if (!S.carregou) return;
+    if (!S.db) aviso("Cadastro indisponível.", "Entre na sua conta do Claude e abra o link de novo.");
+    else if (S.erro) aviso("Não foi possível carregar.", "Recarregue a página para tentar de novo.");
+    else if (S.tab === "candidato" && !S.uid) aviso("Entre para se cadastrar.", "Sem identificação na sua conta, o envio fica desativado.");
+    else if (S.tab === "candidato" && S.canWrite === false) aviso("Acesso só de leitura.", "Para se cadastrar, peça ao responsável permissão de colaborador neste link.");
+  }
+
+  /* ---------- Área do candidato ---------- */
+  function renderExtras() {
+    var box = $("extras"); box.textContent = "";
+    F.extras.forEach(function (v, i) {
+      var inp = h("input", { id: "x-" + i, type: "text", maxlength: "80", list: "lista-cargos", value: v, "aria-label": "Cargo " + (i + 3), placeholder: "Cargo " + (i + 3), autocomplete: "off" });
+      inp.addEventListener("input", function () { F.extras[i] = inp.value; });
+      box.append(h("div", { class: "extra-row" }, inp,
+        h("button", { class: "btn small", type: "button", "aria-label": "Remover cargo " + (i + 3), text: "Remover", onclick: function () { F.extras.splice(i, 1); renderExtras(); } })));
+    });
+    $("add-extra").disabled = F.extras.length >= MAX_EXTRAS;
+  }
+  function renderAreas() {
+    var box = $("areas"); box.textContent = "";
+    AREAS.forEach(function (a) {
+      var on = F.areas.indexOf(a) >= 0;
+      box.append(h("button", { class: "chipbtn", type: "button", "aria-pressed": on ? "true" : "false", text: a, onclick: function () {
+        var i = F.areas.indexOf(a); if (i >= 0) F.areas.splice(i, 1); else F.areas.push(a); renderAreas(); } }));
+    });
+  }
+  function renderCampoArq() {
+    var box = $("campo-arq"); box.textContent = "";
+    if (S.assets) {
+      box.append(h("label", { for: "c-arq" }, "Currículo ", h("small", { text: S.meu && S.meu.arquivoId ? "· já enviado, anexe de novo só se quiser trocar" : "· PDF ou imagem, até 20 MB" })),
+        h("input", { id: "c-arq", type: "file", accept: ".pdf,application/pdf,image/png,image/jpeg" }));
+    } else {
+      box.append(h("label", { for: "c-link" }, "Link do currículo ", h("small", { text: "· envio de arquivo indisponível para o seu acesso" })),
+        h("input", { id: "c-link", type: "url", maxlength: "300", placeholder: "https://", value: (S.meu && S.meu.link) || "" }));
+    }
+  }
+  function renderStatusCand() {
+    var box = $("cand-status"); box.textContent = "";
+    if (S.meu && S.meu.enviadoEm) box.append(h("p", { class: "sent" }, h("b", { text: "Cadastro recebido" }), " em " + dataCurta(S.meu.enviadoEm) + ". Você pode alterar os dados abaixo e enviar de novo."));
+    $("c-enviar").textContent = S.meu && S.meu.enviadoEm ? "Atualizar cadastro" : "Enviar cadastro";
+    $("form-cand").hidden = !(S.uid && S.canWrite !== false) && S.carregou;
+  }
+  function preencherForm() {
+    if (S.preenchido || !S.meu) return;
+    S.preenchido = true;
+    $("c-nome").value = S.meu.nome || "";
+    $("c-cargo1").value = S.meu.cargo1 || "";
+    $("c-cargo2").value = S.meu.cargo2 || "";
+    $("c-contato").value = S.meu.contato || "";
+    F.extras = (S.meu.extras || []).slice(0, MAX_EXTRAS);
+    F.areas = (S.meu.areas || []).slice();
+    renderExtras(); renderAreas();
+  }
+  $("add-extra").addEventListener("click", function () {
+    if (F.extras.length >= MAX_EXTRAS) return;
+    F.extras.push(""); renderExtras();
+    var el = $("x-" + (F.extras.length - 1)); if (el) el.focus();
+  });
+  $("form-cand").addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    var err = $("c-err"), btn = $("c-enviar");
+    var nome = $("c-nome").value.trim(), c1 = $("c-cargo1").value.trim(), c2 = $("c-cargo2").value.trim();
+    var contato = $("c-contato").value.trim();
+    var arq = $("c-arq") && $("c-arq").files && $("c-arq").files[0];
+    var link = $("c-link") ? $("c-link").value.trim() : "";
+    ["c-nome", "c-cargo1", "c-link"].forEach(function (i) { if ($(i)) $(i).removeAttribute("aria-invalid"); });
+    err.textContent = "";
+    function falha(id, msg) { if ($(id)) { $(id).setAttribute("aria-invalid", "true"); $(id).focus(); } err.textContent = msg; }
+    if (nome.length < 3) return falha("c-nome", "Informe seu nome completo.");
+    if (!c1) return falha("c-cargo1", "Informe o cargo que você mais deseja.");
+    if (link && !/^https?:\/\//i.test(link)) return falha("c-link", "O link precisa começar com http:// ou https://.");
+    var temArquivo = !!(arq || (S.meu && S.meu.arquivoId) || link || (S.meu && S.meu.link));
+    if (!temArquivo) return falha(S.assets ? "c-arq" : "c-link", S.assets ? "Anexe seu currículo." : "Informe o link do seu currículo.");
+    if (arq && arq.size > 20 * 1024 * 1024) return falha("c-arq", "O arquivo é maior que 20 MB. Envie uma versão menor.");
+    btn.disabled = true; btn.textContent = "Enviando…";
+    try {
+      var dados = { uid: S.uid, nome: nome, cargo1: c1, cargo2: c2,
+        extras: F.extras.map(function (x) { return x.trim(); }).filter(Boolean),
+        areas: F.areas.slice(), contato: contato, enviadoEm: Date.now() };
+      if (!S.assets) dados.link = link;
+      if (arq && S.assets) {
+        var r = await S.assets.upload(arq);
+        dados.arquivoId = r.id; dados.arquivoNome = arq.name.slice(0, 120);
+      }
+      var ref = S.db.doc("talentos/" + S.uid);
+      var cur = await ref.get();
+      if (cur.exists) await ref.update(dados); else await ref.set(dados);
+      S.meu = Object.assign({}, S.meu || {}, dados);
+      toast("Cadastro enviado");
+      renderCampoArq(); renderStatusCand();
+    } catch (e) {
+      err.textContent = msgErro(e, "Não foi possível enviar agora. Tente de novo em instantes.");
+    }
+    btn.disabled = false; renderStatusCand();
+  });
+
+  /* ---------- Gestão ---------- */
+  function tierDe(id) { var i = S.tags.findIndex(function (t) { return t.id === id; }); return i < 0 ? S.tags.length : i; }
+  function kindDe(id) { var i = S.tags.findIndex(function (t) { return t.id === id; }); return i >= 0 && i < KIND.length ? KIND[i] : "n"; }
+  function rankingCompleto() {
+    var arr = S.talentos.map(function (t) { return Object.assign({}, t, { g: S.gest[t.uid] || {} }); });
+    arr.sort(function (a, b) {
+      return tierDe(a.g.tag) - tierDe(b.g.tag) ||
+        (a.g.ordem == null ? 1e9 : a.g.ordem) - (b.g.ordem == null ? 1e9 : b.g.ordem) ||
+        (a.enviadoEm || 0) - (b.enviadoEm || 0);
+    });
+    arr.forEach(function (t, i) { t.pos = i + 1; });
+    return arr;
+  }
+  function salvarGest(uid, patch) {
+    var ref = S.db.doc("gestao/" + uid);
+    return S.gest[uid] ? ref.update(patch) : ref.set(patch);
+  }
+  async function executar(fn, falhou) {
+    if (S.busy) return;
+    S.busy = true;
+    try { await fn(); } catch (e) { toast(msgErro(e, falhou)); }
+    S.busy = false; renderGestao();
+  }
+  function mudarTag(t, tagId) {
+    executar(async function () {
+      var destino = rankingCompleto().filter(function (x) { return (x.g.tag || "") === tagId && x.uid !== t.uid; });
+      var ordem = destino.reduce(function (m, x) { return Math.max(m, x.g.ordem == null ? -1 : x.g.ordem); }, -1) + 1;
+      await salvarGest(t.uid, { tag: tagId, ordem: ordem });
+    }, "Não foi possível mudar a tag.");
+  }
+  function mover(t, dir) {
+    executar(async function () {
+      var grupo = rankingCompleto().filter(function (x) { return tierDe(x.g.tag) === tierDe(t.g.tag); });
+      var i = grupo.findIndex(function (x) { return x.uid === t.uid; });
+      var j = i + dir;
+      if (j < 0 || j >= grupo.length) return;
+      var tmp = grupo[i]; grupo[i] = grupo[j]; grupo[j] = tmp;
+      for (var k = 0; k < grupo.length; k++) {
+        if (grupo[k].g.ordem !== k) await salvarGest(grupo[k].uid, { ordem: k, tag: grupo[k].g.tag || "" });
+      }
+    }, "Não foi possível mudar a posição.");
+  }
+  function salvarTags(tags) { return S.db.doc("gestao/_config").set({ tags: tags }); }
+
+  function renderResumo(todos) {
+    var box = $("resumo"); box.textContent = "";
+    function botao(id, nome, n) {
+      box.append(h("button", { class: "filt", type: "button", "aria-pressed": S.fTag === id ? "true" : "false",
+        onclick: function () { S.fTag = S.fTag === id ? "" : id; renderGestao(); } }, nome, h("span", { class: "n", text: String(n) })));
+    }
+    box.append(h("button", { class: "filt", type: "button", "aria-pressed": S.fTag === "" ? "true" : "false",
+      onclick: function () { S.fTag = ""; renderGestao(); } }, "Todos", h("span", { class: "n", text: String(todos.length) })));
+    S.tags.forEach(function (tg) { botao(tg.id, tg.nome, todos.filter(function (t) { return t.g.tag === tg.id; }).length); });
+    botao("_none", "Sem tag", todos.filter(function (t) { return tierDe(t.g.tag) >= S.tags.length; }).length);
+  }
+  function renderTopCargos(todos) {
+    var box = $("top-cargos"); box.textContent = "";
+    var cont = {}, nomes = {};
+    todos.forEach(function (t) {
+      [t.cargo1, t.cargo2].concat(t.extras || []).forEach(function (c) {
+        var k = norm(c); if (!k) return;
+        cont[k] = (cont[k] || 0) + 1; if (!nomes[k]) nomes[k] = c;
+      });
+    });
+    Object.keys(cont).sort(function (a, b) { return cont[b] - cont[a]; }).slice(0, 8).forEach(function (k) {
+      box.append(h("button", { class: "filt", type: "button", "aria-pressed": norm(S.fBusca) === k ? "true" : "false",
+        onclick: function () { S.fBusca = norm(S.fBusca) === k ? "" : nomes[k]; $("busca-cargo").value = S.fBusca; renderGestao(); } },
+        nomes[k], h("span", { class: "n", text: String(cont[k]) })));
+    });
+  }
+  function linhaCandidato(t, grupoIdx, grupoTam) {
+    var sel = h("select", { class: "tagsel", "data-k": kindDe(t.g.tag), "aria-label": "Tag de " + t.nome,
+      onchange: function (ev) { ev.target.disabled = true; mudarTag(t, ev.target.value); } });
+    sel.append(h("option", { value: "", text: "Sem tag", selected: tierDe(t.g.tag) >= S.tags.length }));
+    S.tags.forEach(function (tg) { sel.append(h("option", { value: tg.id, text: tg.nome, selected: t.g.tag === tg.id })); });
+    var cargos = h("div", { class: "cargos" },
+      h("span", { class: "cg p1", text: "Prioritário: " + t.cargo1 }),
+      t.cargo2 ? h("span", { class: "cg p2", text: "Possível: " + t.cargo2 }) : null,
+      (t.extras || []).map(function (c) { return h("span", { class: "cg", text: c }); }),
+      (t.areas || []).map(function (a) { return h("span", { class: "cg area", text: a }); }));
+    var arq = t.arquivoId ? h("a", { class: "btn small", href: "/_blob/" + t.arquivoId, target: "_blank", rel: "noopener", text: "Abrir currículo" })
+      : (t.link ? h("a", { class: "btn small", href: t.link, target: "_blank", rel: "noopener noreferrer", text: "Ver link" }) : null);
+    return h("li", { class: "linha", "data-tier": String(tierDe(t.g.tag)) },
+      h("div", { class: "pos", text: String(t.pos), "aria-label": "Posição " + t.pos }),
+      h("div", { style: "min-width:0" },
+        h("div", { class: "nome", text: t.nome }),
+        h("div", { class: "meta", text: [t.contato, "cadastrado em " + dataCurta(t.enviadoEm)].filter(Boolean).join(" · ") }),
+        cargos),
+      h("div", { class: "lado" }, sel,
+        h("div", { class: "mov" },
+          h("button", { class: "btn small", type: "button", "aria-label": "Subir " + t.nome, text: "↑", disabled: grupoIdx === 0, onclick: function () { mover(t, -1); } }),
+          h("button", { class: "btn small", type: "button", "aria-label": "Descer " + t.nome, text: "↓", disabled: grupoIdx === grupoTam - 1, onclick: function () { mover(t, 1); } })),
+        arq));
+  }
+  function renderRanking(todos) {
+    var box = $("ranking"); box.textContent = "";
+    if (!todos.length) {
+      box.append(h("div", { class: "empty" }, h("h2", { text: "Nenhum candidato ainda" }),
+        h("p", { text: "Quando alguém preencher a Área do candidato, o cadastro aparece aqui com os cargos desejados e o currículo." })));
+      return;
+    }
+    var q = norm(S.fBusca);
+    var filtrados = todos.filter(function (t) {
+      if (S.fTag === "_none" && tierDe(t.g.tag) < S.tags.length) return false;
+      if (S.fTag && S.fTag !== "_none" && t.g.tag !== S.fTag) return false;
+      if (!q) return true;
+      return norm([t.nome, t.cargo1, t.cargo2].concat(t.extras || [], t.areas || []).join(" ")).indexOf(q) >= 0;
+    });
+    if (!filtrados.length) { box.append(h("div", { class: "empty" }, h("h2", { text: "Nada encontrado" }), h("p", { text: "Nenhum candidato combina com esse filtro." }))); return; }
+    var porTier = {};
+    todos.forEach(function (t) { var k = tierDe(t.g.tag); (porTier[k] = porTier[k] || []).push(t.uid); });
+    var ul = h("ol", { class: "rank" });
+    filtrados.forEach(function (t) {
+      var lista = porTier[tierDe(t.g.tag)];
+      ul.append(linhaCandidato(t, lista.indexOf(t.uid), lista.length));
+    });
+    box.append(ul);
+  }
+  function renderTagsLista() {
+    var box = $("tags-lista"); box.textContent = "";
+    S.tags.forEach(function (tg, i) {
+      box.append(h("div", { class: "tag-item" },
+        h("span", { class: "tagsel", "data-k": KIND[i] || "n", text: (i + 1) + ". " + tg.nome, style: "justify-self:start;cursor:default" }),
+        h("div", { class: "mov" },
+          h("button", { class: "btn small", type: "button", "aria-label": "Subir tag " + tg.nome, text: "↑", disabled: i === 0, onclick: function () { moverTag(i, -1); } }),
+          h("button", { class: "btn small", type: "button", "aria-label": "Descer tag " + tg.nome, text: "↓", disabled: i === S.tags.length - 1, onclick: function () { moverTag(i, 1); } }),
+          h("button", { class: "btn small danger", type: "button", "aria-label": "Remover tag " + tg.nome, text: "Remover", onclick: function () { removerTag(i); } }))));
+    });
+  }
+  function moverTag(i, dir) {
+    var t = S.tags.slice(), j = i + dir; if (j < 0 || j >= t.length) return;
+    var x = t[i]; t[i] = t[j]; t[j] = x;
+    executar(function () { return salvarTags(t); }, "Não foi possível salvar as tags.");
+  }
+  function removerTag(i) {
+    var t = S.tags.slice(), gone = t.splice(i, 1)[0];
+    executar(function () { return salvarTags(t); }, "Não foi possível remover a tag.");
+    toast("Tag \"" + gone.nome + "\" removida");
+  }
+  $("form-tag").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var nome = $("tag-nome").value.trim();
+    if (!nome || !S.db) return;
+    if (S.tags.some(function (t) { return norm(t.nome) === norm(nome); })) { toast("Já existe uma tag com esse nome"); return; }
+    var t = S.tags.concat([{ id: "t" + Date.now().toString(36), nome: nome }]);
+    $("tag-nome").value = "";
+    executar(function () { return salvarTags(t); }, "Não foi possível criar a tag.");
+  });
+  $("busca-cargo").addEventListener("input", function (e) { S.fBusca = e.target.value; renderGestao(); });
+
+  function renderGestao() {
+    if (!S.isAdmin) return;
+    var todos = rankingCompleto();
+    renderResumo(todos); renderTopCargos(todos); renderRanking(todos); renderTagsLista();
+    var hg = $("home-gestao"); hg.textContent = "";
+    hg.append(h("div", { class: "gestao-card" },
+      h("div", {}, h("b", { text: todos.length + (todos.length === 1 ? " candidato cadastrado" : " candidatos cadastrados") }), h("div", { class: "hint", text: "Área de gestão: tags e ranking." })),
+      h("a", { class: "btn primary", href: "#gestao", text: "Abrir gestão" })));
+  }
+
+  /* ---------- Início ---------- */
+  async function iniciar() {
+    $("lista-cargos").append.apply($("lista-cargos"), CARGOS.map(function (c) { return h("option", { value: c }); }));
+    renderExtras(); renderAreas(); renderCampoArq(); renderVista();
+    var r = await Promise.all([use("db"), use("user"), use("assets")]);
+    S.db = r[0]; S.user = r[1]; S.assets = r[2];
+    if (S.user) {
+      S.isAdmin = await S.user.canEdit();
+      S.uid = await S.user.id();
+      var cw = await S.user.can("data.write");
+      S.canWrite = cw === null ? true : cw;
+    }
+    lerHash(); S.carregou = true;
+    renderVista(); renderCampoArq(); renderStatusCand(); renderAvisos(); renderGestao();
+    window.addEventListener("hashchange", renderAvisos);
+    if (!S.db) return;
+    if (S.uid) {
+      S.db.doc("talentos/" + S.uid).onSnapshot(function (s) {
+        S.meu = s.exists ? s.data() : null;
+        preencherForm(); renderCampoArq(); renderStatusCand();
+      }, function () {});
+    }
+    if (S.isAdmin) {
+      S.db.collection("talentos").onSnapshot(function (snap) {
+        S.talentos = snap.docs.map(function (d) { return Object.assign({ uid: d.id }, d.data()); });
+        renderGestao();
+      }, function (e) { S.erro = e && e.code || "erro"; renderAvisos(); });
+      S.db.collection("gestao").onSnapshot(function (snap) {
+        var g = {};
+        snap.docs.forEach(function (d) {
+          if (d.id === "_config") { var tg = (d.data() || {}).tags; if (Array.isArray(tg)) S.tags = tg; }
+          else g[d.id] = d.data();
+        });
+        S.gest = g; renderGestao();
+      }, function () {});
+    }
+  }
+  iniciar();
+})();
+</script>
+</body>
+</html>
